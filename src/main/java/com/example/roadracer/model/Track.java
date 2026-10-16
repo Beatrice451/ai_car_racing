@@ -45,4 +45,21 @@ public class Track {
         Vec2 a = points.get(0), b = points.get(1);
         return Math.atan2(b.y() - a.y(), b.x() - a.x());
     }
+
+    public double progress(Vec2 p) {
+    if (points.size() < 2) return 0;
+    double best = Double.POSITIVE_INFINITY;
+    double bestIdx = 0;
+    for (int i = 1; i < points.size(); i++) {
+        Vec2 a = points.get(i - 1), b = points.get(i);
+        double dx = b.x() - a.x(), dy = b.y() - a.y();
+        double len2 = dx * dx + dy * dy;
+        double t = len2 == 0 ? 0 : ((p.x() - a.x()) * dx + (p.y() - a.y()) * dy) / len2;
+        t = Math.max(0, Math.min(1, t));
+        double px = a.x() + t * dx, py = a.y() + t * dy;
+        double d = Math.hypot(p.x() - px, p.y() - py);
+        if (d < best) { best = d; bestIdx = (i - 1) + t; }
+    }
+    return bestIdx;
+}
 }

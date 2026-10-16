@@ -1,5 +1,6 @@
 package com.example.roadracer.app;
 
+import com.example.roadracer.ai.AiRaceView;
 import com.example.roadracer.editor.TrackEditorView;
 import com.example.roadracer.game.RaceView;
 import com.example.roadracer.model.Track;
@@ -15,16 +16,23 @@ public class RoadRacerApp extends Application {
     private Stage stage;
     private final Track track = new Track();
     private RaceView raceView;
+    private AiRaceView aiView;
 
-    @Override public void start(Stage stage) {
+    @Override
+    public void start(Stage stage) {
         this.stage = stage;
         stage.setTitle("RoadRacer — гонки и редактор трасс");
-        showHome(); stage.setMinWidth(900); stage.setMinHeight(650); stage.show();
+        showHome();
+        stage.setMinWidth(900);
+        stage.setMinHeight(650);
+        stage.show();
     }
 
     private void showHome() {
-        Label title = new Label("ROAD RACER"); title.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: white;");
-        Label subtitle = new Label("2D-гонки с собственными трассами"); subtitle.setStyle("-fx-text-fill: #c5cbd3; -fx-font-size: 15px;");
+        Label title = new Label("ROAD RACER");
+        title.setStyle("-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: white;");
+        Label subtitle = new Label("2D-гонки с собственными трассами");
+        subtitle.setStyle("-fx-text-fill: #c5cbd3; -fx-font-size: 15px;");
         VBox root = getVBox(title, subtitle);
         stage.setScene(new Scene(root, 1100, 720));
     }
@@ -34,16 +42,26 @@ public class RoadRacerApp extends Application {
         editor.setOnAction(e -> showEditor());
         Button race = new Button("Начать гонку");
         race.setOnAction(e -> {
-            if (!track.isUsable()) { Alert a = new Alert(Alert.AlertType.INFORMATION, "Сначала создайте трассу в редакторе."); a.showAndWait(); }
-            else showRace();
+            if (!track.isUsable()) {
+                Alert a = new Alert(Alert.AlertType.INFORMATION, "Сначала создайте трассу в редакторе.");
+                a.showAndWait();
+            } else showRace();
         });
-        VBox root = new VBox(18, title, subtitle, editor, race);
+
+        Button ai = new Button("AI-тренировка");
+        ai.setOnAction(e -> {
+            if (!track.isUsable()) {
+                Alert a = new Alert(Alert.AlertType.INFORMATION, "Сначала создайте трассу в редакторе.");
+                a.showAndWait();
+            } else showAi();
+        });
+        VBox root = new VBox(18, title, subtitle, editor, race, ai);
         root.setStyle("-fx-background-color: #202328; -fx-alignment: center; -fx-padding: 40;");
         return root;
     }
 
     private void showEditor() {
-        TrackEditorView view = new TrackEditorView(track, this::showRace);
+        TrackEditorView view = new TrackEditorView(track, this::showRace, this::showHome);
         stage.setScene(new Scene(view, 1100, 720));
     }
 
@@ -55,6 +73,23 @@ public class RoadRacerApp extends Application {
         raceView.requestFocus();
     }
 
-    @Override public void stop() { if (raceView != null) raceView.stop(); }
-    public static void main(String[] args) { launch(args); }
+
+    private void showAi() {
+        if (!track.isUsable()) return;
+        if (raceView != null) raceView.stop();
+        if (aiView != null) aiView.stop();
+        aiView = new AiRaceView(track, this::showEditor);
+        stage.setScene(new Scene(aiView, 1100, 720));
+        aiView.requestFocus();
+    }
+
+    @Override
+    public void stop() {
+        if (raceView != null) raceView.stop();
+        if (aiView != null) aiView.stop();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 }

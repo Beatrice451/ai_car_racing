@@ -16,6 +16,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
+
 import java.io.File;
 
 public class TrackEditorView extends BorderPane {
@@ -24,25 +25,32 @@ public class TrackEditorView extends BorderPane {
     private final Label status = new Label("Зажмите левую кнопку мыши и рисуйте трассу.");
     private boolean drawing;
 
-    public TrackEditorView(Track track, Runnable onRace) {
+    public TrackEditorView(Track track, Runnable onRace, Runnable onBack) {
         this.track = track;
         setStyle("-fx-background-color: #202328; -fx-padding: 10;");
         HBox toolbar = new HBox(8);
         toolbar.setStyle("-fx-padding: 8; -fx-alignment: center-left;");
+        Button back = new Button("← Назад");
+        back.setOnAction(e -> onBack.run());
         Button clear = new Button("Новая трасса");
         Button setStart = new Button("Старт здесь");
         Button save = new Button("Сохранить…");
         Button load = new Button("Загрузить…");
         Button race = new Button("Начать гонку ▶");
         Slider width = new Slider(40, 150, track.getRoadWidth());
-        width.setPrefWidth(150); width.setShowTickLabels(true); width.setMajorTickUnit(50);
-        toolbar.getChildren().addAll(clear, new Label("Ширина дороги:"), width, setStart, save, load, race);
+        width.setPrefWidth(150);
+        width.setShowTickLabels(true);
+        width.setMajorTickUnit(50);
+        toolbar.getChildren().addAll(back, clear, new Label("Ширина дороги:"), width, setStart, save, load, race);
         setTop(toolbar);
         canvas.widthProperty().bind(widthProperty().subtract(20));
         canvas.heightProperty().bind(heightProperty().subtract(100));
         canvas.widthProperty().addListener((o, a, b) -> render());
         canvas.heightProperty().addListener((o, a, b) -> render());
-        width.valueProperty().addListener((o, a, b) -> { track.setRoadWidth(b.doubleValue()); render(); });
+        width.valueProperty().addListener((o, a, b) -> {
+            track.setRoadWidth(b.doubleValue());
+            render();
+        });
         canvas.setOnMousePressed(e -> {
             if (e.isPrimaryButtonDown()) {
                 drawing = true;
@@ -61,18 +69,27 @@ public class TrackEditorView extends BorderPane {
             }
         });
         canvas.setOnMouseReleased(e -> drawing = false);
-        clear.setOnAction(e -> { track.getPoints().clear(); track.setStartPosition(new Vec2(160, 160)); track.setStartAngle(0); render(); });
+        clear.setOnAction(e -> {
+            track.getPoints().clear();
+            track.setStartPosition(new Vec2(160, 160));
+            track.setStartAngle(0);
+            render();
+        });
         setStart.setOnAction(e -> {
             if (track.getPoints().size() >= 2) {
                 track.setStartPosition(track.getPoints().get(0));
                 track.setStartAngle(track.angleAtStart());
-                status.setText("Старт установлен в начале дороги."); render();
+                status.setText("Старт установлен в начале дороги.");
+                render();
             } else status.setText("Сначала нарисуйте трассу хотя бы из двух точек.");
         });
         save.setOnAction(e -> saveTrack());
         load.setOnAction(e -> loadTrack(width));
         race.setOnAction(e -> {
-            if (!track.isUsable()) { status.setText("Нарисуйте трассу перед началом гонки."); return; }
+            if (!track.isUsable()) {
+                status.setText("Нарисуйте трассу перед началом гонки.");
+                return;
+            }
             if (track.getStartPosition() == null) track.setStartPosition(track.getPoints().get(0));
             onRace.run();
         });
@@ -87,30 +104,50 @@ public class TrackEditorView extends BorderPane {
     private void render() {
         GraphicsContext g = canvas.getGraphicsContext2D();
         TrackRenderer.draw(g, track, canvas.getWidth(), canvas.getHeight());
-        if (drawing) { g.setFill(Color.WHITE); g.fillOval(-3, -3, 6, 6); }
+        if (drawing) {
+            g.setFill(Color.WHITE);
+            g.fillOval(-3, -3, 6, 6);
+        }
     }
 
     private void saveTrack() {
-        FileChooser chooser = new FileChooser(); chooser.setTitle("Сохранить трассу");
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Сохранить трассу");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Трасса JSON", "*.json"));
         File file = chooser.showSaveDialog(getScene().getWindow());
-        if (file != null) try { TrackStore.save(track, file.toPath()); status.setText("Трасса сохранена: " + file.getName()); }
-        catch (Exception ex) { showError("Не удалось сохранить трассу", ex); }
+        if (file != null) try {
+            TrackStore.save(track, file.toPath());
+            status.setText("Трасса сохранена: " + file.getName());
+        } catch (Exception ex) {
+            showError("Не удалось сохранить трассу", ex);
+        }
     }
 
     private void loadTrack(Slider width) {
-        FileChooser chooser = new FileChooser(); chooser.setTitle("Загрузить трассу");
+        FileChooser chooser = new FileChooser();
+        chooser.setTitle("Загрузить трассу");
         chooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("Трасса JSON", "*.json"));
         File file = chooser.showOpenDialog(getScene().getWindow());
         if (file != null) try {
             Track loaded = TrackStore.load(file.toPath());
-            track.setName(loaded.getName()); track.setRoadWidth(loaded.getRoadWidth());
-            track.setPoints(loaded.getPoints()); track.setStartPosition(loaded.getStartPosition()); track.setStartAngle(loaded.getStartAngle());
-            width.setValue(track.getRoadWidth()); status.setText("Загружена трасса: " + file.getName()); render();
-        } catch (Exception ex) { showError("Не удалось загрузить трассу", ex); }
+            track.setName(loaded.getName());
+            track.setRoadWidth(loaded.getRoadWidth());
+            track.setPoints(loaded.getPoints());
+            track.setStartPosition(loaded.getStartPosition());
+            track.setStartAngle(loaded.getStartAngle());
+            width.setValue(track.getRoadWidth());
+            status.setText("Загружена трасса: " + file.getName());
+            render();
+        } catch (Exception ex) {
+            showError("Не удалось загрузить трассу", ex);
+        }
     }
 
     private void showError(String title, Exception ex) {
-        Alert alert = new Alert(Alert.AlertType.ERROR); alert.setTitle(title); alert.setHeaderText(title); alert.setContentText(ex.getMessage()); alert.showAndWait();
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setHeaderText(title);
+        alert.setContentText(ex.getMessage());
+        alert.showAndWait();
     }
 }
