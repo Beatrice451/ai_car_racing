@@ -1,8 +1,10 @@
 package com.example.roadracer.app;
 
+import com.example.roadracer.ai.AiModel;
 import com.example.roadracer.ai.AiRaceView;
 import com.example.roadracer.editor.TrackEditorView;
 import com.example.roadracer.game.RaceView;
+import com.example.roadracer.game.VersusRaceView;
 import com.example.roadracer.model.Track;
 import javafx.application.Application;
 import javafx.scene.Scene;
@@ -17,6 +19,7 @@ public class RoadRacerApp extends Application {
     private final Track track = new Track();
     private RaceView raceView;
     private AiRaceView aiView;
+    private AiModel currentAiModel;
 
     @Override
     public void start(Stage stage) {
@@ -55,7 +58,10 @@ public class RoadRacerApp extends Application {
                 a.showAndWait();
             } else showAi();
         });
-        VBox root = new VBox(18, title, subtitle, editor, race, ai);
+
+        Button versus = new Button("Гонка с ИИ");
+        versus.setOnAction(e -> showVersus());
+        VBox root = new VBox(18, title, subtitle, editor, race, versus, ai);
         root.setStyle("-fx-background-color: #202328; -fx-alignment: center; -fx-padding: 40;");
         return root;
     }
@@ -78,9 +84,28 @@ public class RoadRacerApp extends Application {
         if (!track.isUsable()) return;
         if (raceView != null) raceView.stop();
         if (aiView != null) aiView.stop();
-        aiView = new AiRaceView(track, this::showEditor);
+        aiView = new AiRaceView(track, this::showEditor, model -> this.currentAiModel = model);
         stage.setScene(new Scene(aiView, 1100, 720));
         aiView.requestFocus();
+    }
+
+    private void showVersus() {
+        if (!track.isUsable()) {
+            Alert a = new Alert(Alert.AlertType.INFORMATION, "Сначала создайте трассу.");
+            a.showAndWait();
+            return;
+        }
+        if (currentAiModel == null) {
+            Alert a = new Alert(Alert.AlertType.INFORMATION,
+                    "Сначала обучите ИИ хотя бы одно поколение (кнопка «AI-тренировка»).");
+            a.showAndWait();
+            return;
+        }
+        if (raceView != null) raceView.stop();
+        if (aiView != null) aiView.stop();
+        VersusRaceView view = new VersusRaceView(track, currentAiModel, this::showEditor);
+        stage.setScene(new Scene(view, 1100, 720));
+        view.requestFocus();
     }
 
     @Override

@@ -7,6 +7,7 @@ public class Agent {
     public final Brain brain;
     public double maxProgress;
     public boolean alive = true;
+    public int nextCheckpoint = 1;
 
     public Agent(Brain b) { this.brain = b; }
 }
